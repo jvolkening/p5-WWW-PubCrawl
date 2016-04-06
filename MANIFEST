@@ -1,0 +1,19 @@
+lib/WWW/PubCrawl.pm
+lib/WWW/PubCrawl/Parser/ACS.pm
+lib/WWW/PubCrawl/Parser/BMC.pm
+lib/WWW/PubCrawl/Parser/EBSCO.pm
+lib/WWW/PubCrawl/Parser/General.pm
+lib/WWW/PubCrawl/Parser/Ingenta.pm
+lib/WWW/PubCrawl/Parser/JSTAGE.pm
+lib/WWW/PubCrawl/Parser/JSTOR.pm
+lib/WWW/PubCrawl/Parser/Nature.pm
+lib/WWW/PubCrawl/Parser/NEJM.pm
+lib/WWW/PubCrawl/Parser/NRC.pm
+lib/WWW/PubCrawl/Parser/ScienceDirect.pm
+lib/WWW/PubCrawl/Parser/Springer.pm
+lib/WWW/PubCrawl/Parser/TaylorFrancis.pm
+lib/WWW/PubCrawl/Parser/Wiley.pm
+Makefile.PL
+MANIFEST			This list of files
+bin/extract_firefox_cookies
+bin/pubcrawl

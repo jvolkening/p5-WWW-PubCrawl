@@ -1,0 +1,70 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use WWW::PubCrawl;
+
+my $fn_idlist;
+my $single_id;
+my $fn_log;
+my $fn_cookies;
+my $proxy;
+my $out_dir = '.';
+my $retry_failed  = 0;
+my $skip_existing = 0;
+my $verbose       = 0;
+my $delay         = 0;
+my $shrink_pdf    = 0;
+
+GetOptions(
+    'id_list=s'     => \$fn_idlist,
+    'id=s'          => \$single_id,
+    'log=s'     => \$fn_log,
+    'cookies=s'     => \$fn_cookies,
+    'proxy=s'       => \$proxy,
+    'out_dir=s'     => \$out_dir,
+    'retry_failed'  => \$retry_failed,
+    'skip_existing' => \$skip_existing,
+    'verbose'       => \$verbose,
+    'delay=i'       => \$delay,
+    'shrink_pdf'    => \$shrink_pdf,
+) or die "Error parsing parameters";
+
+die "Can't find ID file" if (defined $fn_idlist && ! -r $fn_idlist);
+
+my @ids;
+if (defined $single_id) {
+    @ids = ($single_id);
+}
+elsif (defined $fn_idlist) {
+    open my $infile, '<', $fn_idlist;
+    LINE:
+    while (my $line = <$infile>) {
+        chomp $line;
+        next LINE if ($line !~ /^\d+$/);
+        push @ids, $line;
+    }
+    close $infile;
+}
+
+my $worker = WWW::PubCrawl->new(
+    cookies => $fn_cookies,
+    proxy   => $proxy,
+    log     => $fn_log,
+    out_dir => $out_dir,
+    verbose => $verbose,
+    skip_existing => $skip_existing,
+    shrink_pdf => $shrink_pdf,
+);
+
+ID:
+for (@ids) {
+    warn "fetching $_\n";
+    $worker->fetch($_);
+    sleep $delay;
+}
+
+exit;
+

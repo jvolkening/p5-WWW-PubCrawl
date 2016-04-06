@@ -1,0 +1,91 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use JSON;
+use DBI;
+use Carp;
+use Getopt::Long;
+
+my $out_filename;
+my $profile_dir;
+
+GetOptions(
+    'profile_dir=s' => \$profile_dir,
+    'out=s'         => \$out_filename,
+);
+
+croak "bad profile directory path" if (! -d $profile_dir);
+
+my $fh_out;
+if (defined $out_filename) {
+    open( $fh_out, '>', $out_filename );
+}
+else {
+    $fh_out = *STDOUT;
+}
+
+my $exp = time() + 31536000;
+
+my @session_files = (
+    "$profile_dir/sessionstore.js",
+    "$profile_dir/sessionstore-backups/recovery.js",
+);
+
+print {$fh_out} "# HTTP Cookie File\n";
+for my $fn (@session_files) {
+    if (-e $fn) {
+        print STDERR "parsing current session file\n";
+        open my $session, '<', $fn;
+        my @lines = <$session>;
+        my $struct = decode_json( join('', @lines) );
+        if (defined $struct->{_closedWindows}) {
+            my @closed_windows = @{ $struct->{_closedWindows} };
+            for my $win (@closed_windows) {
+                if (defined $win->{'cookies'}) {
+                    my @cookies = @{ $win->{'cookies'} };
+                    for (@cookies) {
+                        my  $val = $_->{value};
+                        my  $name = $_->{name};
+                        my  $path = $_->{path};
+                        my  $host = $_->{host};
+                        my  $secure = defined ($_->{secure}) ? 1 : 0;
+                        print {$fh_out} "$host\t0\t$path\t$secure\t$exp\t$name\t$val\n";
+                    }
+                }
+            }
+        }
+        if (defined $struct->{windows}) {
+            my @windows = @{ $struct->{windows} };
+            for my $win (@windows) {
+                if (defined $win->{'cookies'}) {
+                    my @cookies = @{ $win->{'cookies'} };
+                    for (@cookies) {
+                        my  $val = $_->{value};
+                        my  $name = $_->{name};
+                        my  $path = $_->{path};
+                        my  $host = $_->{host};
+                        my  $sub  = $host =~ /^\./ ? 'TRUE' : 'FALSE';
+                        my  $secure = defined ($_->{secure}) ? 'TRUE' : 'FALSE';
+                        print {$fh_out} "$host\t$sub\t$path\t$secure\t$exp\t$name\t$val\n";
+                    }
+                }
+            }
+        }
+    }
+}
+
+if (-e "$profile_dir/cookies.sqlite") {
+    print STDERR "parsing persistent cookies file\n";
+    my $dbh =
+        DBI->connect("dbi:SQLite:dbname=$profile_dir/cookies.sqlite","","");
+    my $sth = $dbh->prepare("SELECT host,path,isSecure,expiry,name,value FROM moz_cookies");
+    $sth->execute;
+    while (my @row = $sth->fetchrow_array) {
+        $row[2] = $row[2] ? 'TRUE' : 'FALSE';
+        splice @row, 1, 0, $row[0] =~ /^\./ ? 'TRUE' : 'FALSE';
+        $row[4] = $exp;
+        print {$fh_out} join("\t", @row), "\n";
+    }
+}
+exit;
